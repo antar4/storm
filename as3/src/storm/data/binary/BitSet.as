@@ -60,7 +60,7 @@ package storm.data.binary {
 		 */
 		[Inline]
 		public final function Set1Pos(i:uint):void {
-			fStorage[i >> 5] |= 1 << (31 - (i & 31)) ;
+			fStorage[i >> 5] |= 1 << (31 - (i & 31));
 		}
 		/**
 		 * Adds the specified bit to the end of the BitSet
@@ -68,7 +68,9 @@ package storm.data.binary {
 		 */
 		[Inline]
 		public final function Add1(val:Boolean):void {
-			fStorage.length = 4 + ((fLen + 1) >> 5);
+			if (fStorage.length < 4 + ((fLen + 1) >> 5)) {
+				fStorage.length = 4 + ((fLen + 1) >> 5);
+			}
 			if (val) {
 				fStorage[fLen >> 5] |= 1 << (31 - (fLen & 31)) ;
 			}
@@ -89,7 +91,7 @@ package storm.data.binary {
 		 */
 		[Inline]
 		public final function Get1Pos(i:int):Boolean {
-			return ((fStorage[i >> 5] << (i & 31)) >>>  31) == 1;
+			return ((fStorage[i >> 5] << (i & 31)) >>> 31) == 1;
 		}
 		/**
 		 * Clones the BitSet
@@ -155,7 +157,6 @@ package storm.data.binary {
 			}
 			var lastByte:int = i;
 			if (sBytes > 0) {
-				
 				for (i = 0; i < sBytes; i++) {
 					fStorage[lastByte] |= (((b.readByte() << 24) >>> 24) << ((3 - i) * 8));
 				}

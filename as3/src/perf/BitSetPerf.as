@@ -57,7 +57,7 @@ package perf {
 			bs.Resize(ITERATIONS_ADD);
 			BeginTest();
 			for (i; i < ITERATIONS_ADD; i++) {
-				bs.Add1(true);
+				bs.Set1Pos(i);
 			}
 			r = StopTest();
 			LogCounter("ADD", "BitSet", r.Time, ITERATIONS_ADD, "Init Size");

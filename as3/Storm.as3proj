@@ -12,11 +12,13 @@
     <movie minorVersion="0" />
     <movie platform="Flash Player" />
     <movie background="#FFFFFF" />
-    <movie preferredSDK="AIR 17.0.0;17.0.0;" />
+    <movie preferredSDK="Flex 4.6.0, AIR 17.0;4.6.0, 17.0;" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="src" />
+    <class path="..\..\Starling-Framework\starling\src" />
+    <class path="..\..\Starling-Extension-Graphics\extension\src" />
   </classpaths>
   <!-- Build options -->
   <build>
@@ -73,7 +75,7 @@
   </library>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>
-    <compile path="src\perf\BitSetPerf.as" />
+    <compile path="src\debug\debugIso\ExecIso.as" />
   </compileTargets>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>

@@ -1,0 +1,18 @@
+IgeObject managed mode
+Category groupping, GetByCategory
+
+
+IsoEntity
+	- Add/Remove Child events + Global Events
+	
+Polygon2d
+	- Optimize to use series of values instead of points
+
+	
+
+	
+
+CONFUSED x,y,z
+floor implementation is messing up with actual numbers
+implement when needed only and leave raw numbers intact
+Move registration point of IsoEntity at the bottom corner (all 3 coords)

@@ -3,18 +3,20 @@
 <!--Any modifications you make may be lost.-->
 <flex-config>
   <target-player>17.0</target-player>
+  <benchmark>false</benchmark>
+  <static-link-runtime-shared-libraries>true</static-link-runtime-shared-libraries>
   <compiler>
     <define append="true">
       <name>CONFIG::debug</name>
-      <value>false</value>
-    </define>
-    <define append="true">
-      <name>CONFIG::release</name>
       <value>true</value>
     </define>
     <define append="true">
+      <name>CONFIG::release</name>
+      <value>false</value>
+    </define>
+    <define append="true">
       <name>CONFIG::timeStamp</name>
-      <value>'1/06/2015'</value>
+      <value>'11/07/2015'</value>
     </define>
     <define append="true">
       <name>CONFIG::air</name>
@@ -28,16 +30,16 @@
       <name>CONFIG::desktop</name>
       <value>false</value>
     </define>
-    <optimize>true</optimize>
-    <omit-trace-statements>true</omit-trace-statements>
-    <verbose-stacktraces>false</verbose-stacktraces>
+    <verbose-stacktraces>true</verbose-stacktraces>
     <source-path append="true">
       <path-element>O:\!Dev\Storm\as3\src</path-element>
+      <path-element>O:\!Dev\Starling-Framework\starling\src</path-element>
+      <path-element>O:\!Dev\Starling-Extension-Graphics\extension\src</path-element>
       <path-element>C:\Program Files (x86)\FlashDevelop\Library\AS3\classes</path-element>
     </source-path>
   </compiler>
   <file-specs>
-    <path-element>O:\!Dev\Storm\as3\src\perf\BitSetPerf.as</path-element>
+    <path-element>O:\!Dev\Storm\as3\src\debug\debugIso\ExecIso.as</path-element>
   </file-specs>
   <default-background-color>#FFFFFF</default-background-color>
   <default-frame-rate>30</default-frame-rate>
