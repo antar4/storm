@@ -30,7 +30,8 @@ package storm.isometric.core {
 		//{ ------------------------ Core ---------------------------------------------------
 		internal function hitTest(p:Point):Boolean {
 			if (!IncludeInBounds) return false;
-			H_P.setTo(p.x - fOffsetX, p.y - fOffsetY);
+			// starling uses local coords
+			H_P.setTo(p.x - DO.x, p.y - DO.y);
 			return DO.hitTest(H_P, false) != null;
 		}
 		//}
@@ -46,9 +47,11 @@ package storm.isometric.core {
 		//{ ------------------------ Properties ---------------------------------------------
 		/** @private */
 		public final function get Bounds():Rectangle {
-			trace(fId +" IDO Bounds=" + DO.bounds);
+			return DO.bounds;
 			H_R.setTo(fOffsetX, fOffsetY, DO.bounds.width, DO.bounds.height);
 			return H_R;
+		}
+		public function get b():Rectangle {
 			return DO.bounds;
 		}
 		public final function get visible():Boolean {

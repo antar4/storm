@@ -152,6 +152,7 @@ package storm.isometric.core {
 			var b:Rectangle;
 			for (var i:* in fEntities) {
 				b = fEntities[i].Bounds;
+				trace(b);
 				if (!RectIntersects(layerBounds, b)) {
 					fEntities[i].Culled = true;
 				} else {

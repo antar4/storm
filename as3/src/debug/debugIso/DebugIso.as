@@ -51,7 +51,7 @@ package debug.debugIso {
 			var bakery:Bitmap = new BAKERY();
 			var bakeryTexture:Texture = Texture.fromBitmap(bakery, false);
 			var bakeryImage:Image = new Image(bakeryTexture);
-			
+			/*
 			
 			e3 = new IsoEntity("e-3", 100, 100, 100);
 			e3.IsoLocation = new IsoPoint(300, 200, 1);
@@ -60,6 +60,7 @@ package debug.debugIso {
 			e3.IsInteractive = true;
 			e3.OnTouch.add(HandleOnEntityTouch);
 			
+			*/
 			e4 = new IsoEntity("e-4", 100, 100, 50);
 			e4.IsoLocation = new IsoPoint(300, 300, 1);
 			var bakeryDO:IsoDisplayObject = e4.addChild("bakery", bakeryImage, -100, -64);
@@ -77,6 +78,7 @@ package debug.debugIso {
 		
 		private function HandleOnEntityTouch(e:IsoEntity, event:int):void {
 			trace("Entity Touched=" + e.Id + " =>" + event);
+			trace("\t" + e.Children[0].b);
 			if (event == EIsoInteractiveEvents.PRESS) {
 				scene.BeginMove(e, true, true);
 			} else if (event == EIsoInteractiveEvents.ROLLOVER) {

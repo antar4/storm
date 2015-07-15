@@ -31,7 +31,10 @@ IsoScene
 		- BOX
 		- BOX_ELASTIC
 		- STRICT?
-
+		
+Optimize:
+	hitTest (all levels -> Layer->Entity->IsoDO)
+	
 	
 
 	

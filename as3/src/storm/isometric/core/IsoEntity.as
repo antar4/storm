@@ -91,6 +91,7 @@ package storm.isometric.core {
 				ido = fChildren[i];
 				if (ido.IncludeInBounds) {
 					r = ido.Bounds;
+					
 					if (r.x < left) {
 						left = r.x;
 					}
@@ -109,7 +110,7 @@ package storm.isometric.core {
 			H_RECT.setTo(left, top, right - left, bot - top);
 			if (!H_RECT.equals(fBounds)) {
 				fBounds.setTo(left, top, right - left, bot - top);
-				trace(fId +" Bounds =" + fBounds);
+				trace(fId + "=>" + fBounds);
 				$OnBoundsChanged();
 			}			
 		}
@@ -343,10 +344,10 @@ package storm.isometric.core {
 		private var fOnTouch:Signal;		
 		/** @private */
 		internal function hitTest(p:Point):Boolean {
-			H_POINT.setTo(p.x - ScreenPt.x, p.y - ScreenPt.y);
-			if (!Bounds.containsPoint(H_POINT)) return false;
+			trace(p);
+			if (!Bounds.containsPoint(p)) return false;
 			for (var i:* in fChildren) {
-				if (fChildren[i].hitTest(H_POINT)) {
+				if (fChildren[i].hitTest(p)) {
 					return true;
 				}
 			}
