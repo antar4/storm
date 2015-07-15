@@ -4,10 +4,16 @@
  * Written by  for NSiFor Holding LTD
  */
 package storm.isometric.core {
+	import flash.geom.Point;
+	import flash.geom.Rectangle;
+	import org.osflash.signals.ISignal;
+	import org.osflash.signals.Signal;
 	import starling.display.DisplayObject;
 	import starling.display.Quad;
 	import starling.display.Sprite;
+	import starling.events.Touch;
 	import starling.events.TouchEvent;
+	import starling.events.TouchPhase;
 	/**
 	 * @author 
 	 */
@@ -69,7 +75,15 @@ package storm.isometric.core {
 		//}
 		
 		//{ ------------------------ API ----------------------------------------------------
-		
+		/**
+		 * Translates the viewport
+		 * @param	animateSeconds 	if greater than zero the camera will move to the new location is the specified seconds
+		 */
+		public function Translate(dx:int, dy:int, animateSeconds:Number = 0.0):void {
+			for (var i:* in fLayers) {
+				fLayers[i].Translate(dx, dy);
+			}
+		}
 		//}
 		
 		//{ ------------------------ Background ---------------------------------------------
@@ -151,8 +165,126 @@ package storm.isometric.core {
 		//{ ------------------------ Interaction --------------------------------------------
 		/** @private */
 		private function HandleOnTouchForDrag(e:TouchEvent):void {
+			if (fMovingEntity != null) {
+				if (HandleOnTouchForMove(e)) {
+					return;
+				}
+			}			
 			
+			if (!fIsDraggingEnabled) {
+				return;
+			}
+			
+			var d:DisplayObject = e.currentTarget as DisplayObject;
+			var t:Touch = e.getTouch(d);
+			if (!t) {
+				return;
+			}
+			t.getLocation(d, TOUCH_HELPER_POINT);
+			if (t.phase == TouchPhase.BEGAN) {
+				fIsDragging = false;
+				fStartDrag = true;
+				fDragPt = TOUCH_HELPER_POINT.clone();
+			} else  if (t.phase == TouchPhase.ENDED) {
+				fStartDrag = false;
+				fIsDragging = false;
+			} else if (fStartDrag || fIsDragging) {
+				var _x:Number = TOUCH_HELPER_POINT.x - fDragPt.x;
+				var _y:Number = TOUCH_HELPER_POINT.y - fDragPt.y;
+				if (fStartDrag) {
+					var ax:int = (_x + (_x >> 31)) ^ (_x >> 31);
+					var ay:int = (_y + (_y >> 31)) ^ (_y >> 31);
+					if (ax + ay < DragSensitivity) {
+						return;
+					} else {
+						fIsDragging = true;
+						fStartDrag = false;
+					}
+				}
+				Translate(_x, _y);
+				fDragPt.setTo(TOUCH_HELPER_POINT.x, TOUCH_HELPER_POINT.y);
+				
+			}
 		}
+		/** @private */
+		protected function HandleOnTouchForMove(e:TouchEvent):Boolean {
+			
+			if (fMovingEntity == null) {
+				return false
+			}
+			var t:Touch = e.getTouch(this);
+			if (!t) {
+				return true;
+			}
+			
+			if (t.phase == TouchPhase.ENDED && fCompleteMoveOnTouchEnd) {
+				CompleteMove();
+				return true;
+			}
+			if (t.phase == TouchPhase.HOVER && !fHasBegunMovingEntity) {
+				return false;
+			}
+			var layer:IsoLayer = fMovingEntity.Layer;
+			if (fHasBegunMovingEntity) {
+				if (t.phase == TouchPhase.ENDED) {
+					fHasBegunMovingEntity = false;
+					return true;
+				}
+				t.getLocation(this, TOUCH_HELPER_POINT);
+				
+				fMovingEntity.Layer.ScreenToIso(TOUCH_HELPER_POINT.x, TOUCH_HELPER_POINT.y, H_POINT_1);
+				// implement tiling
+				fMovingEntity.IsoX = H_POINT_1.x;
+				fMovingEntity.IsoY = H_POINT_1.y;
+			} else {
+				t.getLocation(layer, TOUCH_HELPER_POINT);
+				var ht:IsoHDO = layer.hitTest(TOUCH_HELPER_POINT) as IsoHDO;
+				if (ht == null || ht.Target != fMovingEntity) {
+					return false;
+				}		
+				if (t.phase == TouchPhase.BEGAN || t.phase == TouchPhase.MOVED) {
+					fHasBegunMovingEntity = true;
+					return true;
+				}				
+			}
+			return true;
+		}
+		//}
+		
+		//{ ------------------------ Entities -----------------------------------------------
+		public function BeginMove(e:IsoEntity, lockEverythingElse:Boolean = true, completeMoveOnTouchEnd:Boolean = false):void {
+			if (fMovingEntity != null) {
+				throw new ArgumentError("Cannot BeginMove while an entity is already being moved. Call CompleteMove first");
+			}
+			fCompleteMoveOnTouchEnd = completeMoveOnTouchEnd;
+			fStartDrag = false;
+			fIsDragging = false;
+			fMovingObjectInitialPosition.setTo(e.IsoX, e.IsoY, 0, 0);
+			fMovingEntity = e;
+			fMovingEntity.$BeginMove();
+		}
+		public function CompleteMove(keep:Boolean = true):void {
+			trace("Complete Move");
+			if (!keep) {
+				fMovingEntity.IsoX = fMovingObjectInitialPosition.x;
+				fMovingEntity.IsoY = fMovingObjectInitialPosition.y;
+			}
+			fMovingEntity.$CompleteMove();
+			fMovingEntity = null;
+		}
+		
+		/**
+		 * Indicates the mouse/finger is down and over the fMovingEntity
+		 * and the fMovingOffset is set
+		 * Will be set to false when the mouse/finger is lifted
+		 */
+		protected var fHasBegunMovingEntity:Boolean = false;		
+		/** @private */
+		protected var fMovingObjectInitialPosition:Rectangle = new Rectangle();
+		/** @private */
+		protected var fMovingEntity:IsoEntity;
+		/** @private */
+		protected var fCompleteMoveOnTouchEnd:Boolean = false;
 		//}
 		
 		//{ ------------------------ Validation ---------------------------------------------
@@ -191,6 +323,11 @@ package storm.isometric.core {
 		public function get IsInvalid():Boolean {
 			return fValidationFlags.length > 0;
 		}
+
+
+
+		/** @private */
+		internal var RollOverEntity:IsoEntity;
 		/** @private */
 		private var fValidationFlags:Vector.<int> = new Vector.<int>();
 		/** @private */
@@ -199,6 +336,81 @@ package storm.isometric.core {
 		public static const VALIDATION_SIZE:int = 11;
 		
 		//}		
+		
+		//{ ------------------------ Interaction --------------------------------------------
+		/** @private */
+		internal final function DispatchInteractiveEvent(e:IsoEntity, event:int):void {
+			if (!fDispatchObjectEventsWhenDragging && fIsDragging) {
+				return;
+			}
+			e.$InteractiveEvent(event);
+			fOnEntityTouch.dispatch(e, event);
+		}		
+		/**
+		 * Indicates the entities on the scene respond to long press
+		 */
+		public function get LongPressEnabled():Boolean {
+			return fLongPressEnabled;
+		}
+		/** @private */
+		public function set LongPressEnabled(v:Boolean):void {
+			fLongPressEnabled = v;
+		}		
+		/**
+		 * Indicates if IsoEntity events will be dispatched while
+		 * dragging the scene
+		 * @default	false
+		 */
+		public function get DispatchEventsWhileDragging():Boolean {
+			return fDispatchObjectEventsWhenDragging;
+		}
+		/** @private */
+		public function set DispatchEventsWhileDragging(v:Boolean):void {
+			fDispatchObjectEventsWhenDragging = v;
+		}
+		/**
+		 * Indicates if dragging the universe is enabled
+		 */
+		public function get IsDraggingEnabled():Boolean {
+			return fIsDraggingEnabled;
+		}
+		/** @private */
+		public function set IsDraggingEnabled(v:Boolean):void {
+			fIsDraggingEnabled = v;
+		}		
+		/**
+		 * Dispatched when any Interactive IsoObject is touched
+		 *
+		 * Expected signature is <code>function(isoEntity:IsoEntity, event:int):void</code>
+		 */
+		public function get OnEntityTouch():ISignal {
+			return fOnEntityTouch;
+		}
+		/** @private */
+		private var fOnEntityTouch:Signal = new Signal(IsoEntity, int);		
+		/** @private */
+		private var fDispatchObjectEventsWhenDragging:Boolean = false;		
+		/** @private */
+		protected var fLongPressEnabled:Boolean;
+		/** @private */
+		private var fIsDragging:Boolean = false;
+		/** @private */
+		private var fStartDrag:Boolean = false;
+		/** @private */
+		protected static const TOUCH_HELPER_POINT:Point = new Point();
+		protected static const H_POINT_1:Point = new Point();
+		/** @private */
+		protected static var fDragPt:Point;
+		/** @private */
+		private var fIsDraggingEnabled:Boolean = true;
+		public var LongPressStartTime:int = 250;
+		public var LongPressTime:int = 750;
+		/**
+		 * Minimum amount of pixels in ANY direction
+		 * required to begin a drag operation
+		 */
+		public var DragSensitivity:int = 12;
+		//}
 		
 		//{ ------------------------ Event Handlers -----------------------------------------
 		

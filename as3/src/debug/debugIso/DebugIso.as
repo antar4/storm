@@ -4,9 +4,16 @@
  * Written by  for NSiFor Holding LTD
  */
 package debug.debugIso {
+	import flash.display.Bitmap;
+	import starling.core.Starling;
+	import starling.display.Image;
 	import starling.display.Quad;
 	import starling.display.Sprite;
 	import starling.events.KeyboardEvent;
+	import starling.filters.BlurFilter;
+	import starling.textures.Texture;
+	import storm.isometric.core.EIsoInteractiveEvents;
+	import storm.isometric.core.IsoDisplayObject;
 	import storm.isometric.core.IsoEntity;
 	import storm.isometric.core.IsoLayer;
 	import storm.isometric.core.IsoPoint;
@@ -15,55 +22,77 @@ package debug.debugIso {
 	 * @author 
 	 */
 	public class DebugIso extends Sprite {
+		[Embed(source = "assets/bank1.png")]
+		public static var BANK:Class;		
+		[Embed(source = "assets/bakery1.png")]
+		public static var BAKERY:Class;
+		
 		//{ ------------------------ Constructors -------------------------------------------
 		public function DebugIso() {
-			trace("debug iso");
 			Init();
+			Starling.current.showStatsAt();
 		}
 		//}
 
 		//{ ------------------------ Init ---------------------------------------------------
 		private function Init():void {
-			var s:IsoScene = new IsoScene();
+			scene = new IsoScene();
+			var s:IsoScene = scene;
+			s.OnEntityTouch.add(HandleOnSceneEntityTouch);
 			s.SetSize(600, 400);
 
 			var l:IsoLayer = new IsoLayer("test");
 			s.AddLayer(l);
 			
-			/*
-			var xx:int = 300;
-			var yy:int = 0;
-			var e:IsoEntity
-			for (var _x:int = 0; _x < 3; _x++) {
-				for (var _y:int = 0; _y < 3; _y++) {
-					if (_x == 1 && _y == 1) {
-						e = new IsoEntity("e-" + _x + "-" + _y, 100, 50, 10);
-					} else {
-						e = new IsoEntity("e-" + _x + "-" + _y, 50, 50, 1);
-					}
-					e.IsoLocation = new IsoPoint(xx + (_x * 50), yy + (_y * 50), 0);
-					l.Add(e);
-				}
-			}
-			*/
+			var bank:Bitmap = new BANK();
+			var bankTexture:Texture = Texture.fromBitmap(bank, false);
+			var bankImage:Image = new Image(bankTexture);
+
+			var bakery:Bitmap = new BAKERY();
+			var bakeryTexture:Texture = Texture.fromBitmap(bakery, false);
+			var bakeryImage:Image = new Image(bakeryTexture);
 			
-			var e1:IsoEntity = new IsoEntity("e-1", 50, 50, 10);
-			e1.IsoLocation = new IsoPoint(100, 50, 0);
-			l.Add(e1);
 			
-			/**
-			e3 = new IsoEntity("e-3", 50, 100, 0);
-			e3.IsoLocation = new IsoPoint(0, 50, 50);
+			e3 = new IsoEntity("e-3", 100, 100, 100);
+			e3.IsoLocation = new IsoPoint(300, 200, 1);
+			var bankDO:IsoDisplayObject = e3.addChild("bank", bankImage, -100, -100);
 			l.Add(e3);			
-			*/
-			addChild(s);
+			e3.IsInteractive = true;
+			e3.OnTouch.add(HandleOnEntityTouch);
 			
+			e4 = new IsoEntity("e-4", 100, 100, 50);
+			e4.IsoLocation = new IsoPoint(300, 300, 1);
+			var bakeryDO:IsoDisplayObject = e4.addChild("bakery", bakeryImage, -100, -64);
+			l.Add(e4);			
+			e4.IsInteractive = true;
+			e4.OnTouch.add(HandleOnEntityTouch);
+
+			addChild(s);
 			addEventListener(KeyboardEvent.KEY_UP, HadleOnKey);
 		}
+		
+		private function HandleOnSceneEntityTouch(e:IsoEntity, event:int):void {
+			//trace("Scene Entity Touched=" + e+" =>" + event);
+		}
+		
+		private function HandleOnEntityTouch(e:IsoEntity, event:int):void {
+			trace("Entity Touched=" + e.Id + " =>" + event);
+			if (event == EIsoInteractiveEvents.PRESS) {
+				scene.BeginMove(e, true, true);
+			} else if (event == EIsoInteractiveEvents.ROLLOVER) {
+				e.Children[0].filter = BlurFilter.createGlow(0xFF0000, 10, 2, 2);
+			} else if (event == EIsoInteractiveEvents.ROLLOUT) {
+				e.Children[0].filter = null;
+			}
+			
+		}
+		private var scene:IsoScene;
 		private var e3:IsoEntity ;
+		private var e4:IsoEntity ;
 		
 		private function HadleOnKey(e:KeyboardEvent):void {
 			e3.IsoZ++;
+			
 		}
 		//}
 		

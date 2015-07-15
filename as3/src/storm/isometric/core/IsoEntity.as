@@ -7,12 +7,15 @@ package storm.isometric.core {
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.utils.Dictionary;
+	import org.osflash.signals.ISignal;
+	import org.osflash.signals.Signal;
+	import starling.display.DisplayObject;
 	import starling.display.Graphics;
 	import starling.display.Shape;
 	/**
 	 * @author 
 	 */
-	public class IsoEntity {
+	public class IsoEntity implements IIsoValidatable {
 		//{ ------------------------ Constructors -------------------------------------------
 		public function IsoEntity(id:String, _width:int, _length:int, _height:int) {
 			if (id == null) {
@@ -26,27 +29,102 @@ package storm.isometric.core {
 			fIsoLocation = new IsoPoint(0, 0, 0);
 			fId = id;
 			EntityHash[id] = this;
+			fChildren = new Vector.<IsoDisplayObject>();
+			fBounds = new Rectangle();
+			Invalidate(VALIDATION_POSITION, VALIDATION_RENDER, VALIDATION_VISIBLE);
 		}
 		//}
 
 		//{ ------------------------ Init ---------------------------------------------------
 		internal function $InternalInit(layer:IsoLayer):void {
 			fLayer = layer;
-			c = RenderIsoBox();
-			var p:Point = fIsoLocation.ToIso();
-			if (c!=null) {
-				c.x = p.x;
-				c.y = p.y;
-			}			
-			fLayer.addChild(c);
-			
-			
+			fLayer.SetEntityInteractive(this, fIsInteractive);
+			var c:Shape = RenderIsoBox();
+			addChild("#isobox", c, 0, 0, false);
+			CreateChildren();
 		}
-		private var c:Shape;
+		
 		//}
 		
 		//{ ------------------------ Core ---------------------------------------------------
-		
+		/** @private */
+		protected function CreateChildren():void {
+			var d:DisplayObject;
+			var ido:IsoDisplayObject;
+			var p:Point = ScreenPt;
+			for (var i:* in fChildren) {
+				ido = fChildren[i];
+				d = ido.DO;
+				if (!d.stage) {
+					fLayer.addChild(d);
+					d.x = p.x + ido.fOffsetX;
+					d.y = p.y + ido.fOffsetY;			
+				}
+			}
+		}
+		/** @private */
+		protected function ValidatePosition():void {
+			var p:Point = ScreenPt;
+			var d:DisplayObject;
+			var ido:IsoDisplayObject;			
+			for (var i:* in fChildren) {
+				ido = fChildren[i];
+				d = ido.DO;
+				if (d.stage) {
+					d.x = p.x + ido.fOffsetX;
+					d.y = p.y + ido.fOffsetY;			
+				}
+			}
+			Render();
+		}
+		/** @private */
+		protected function Render():void {
+			var r:Rectangle;
+			var ido:IsoDisplayObject;
+			
+			var bot:int = -999999;
+			var right:int = -999999;
+			var left:int = 999999;
+			var top:int = 999999;
+			
+			for (var i:* in fChildren) {
+				ido = fChildren[i];
+				if (ido.IncludeInBounds) {
+					r = ido.Bounds;
+					if (r.x < left) {
+						left = r.x;
+					}
+					if (r.y < top) {
+						top = r.y;
+					}
+					if (r.right > right) {
+						right = r.right;
+					}
+					if (r.bottom > bot) {
+						bot = r.bottom;
+					}
+				}
+				
+			}
+			H_RECT.setTo(left, top, right - left, bot - top);
+			if (!H_RECT.equals(fBounds)) {
+				fBounds.setTo(left, top, right - left, bot - top);
+				trace(fId +" Bounds =" + fBounds);
+				$OnBoundsChanged();
+			}			
+		}
+		/** @private */
+		protected function ValidateVisible():void {
+			for (var i:* in fChildren) {
+				var v:Boolean = !fCulled && fVisible;
+				fChildren[i].visible = v;
+			}
+		}
+		/** @private */
+		internal function $BeginMove():void {
+		}
+		internal function $CompleteMove():void {
+		}
 		//}
 		
 		//{ ------------------------ API ----------------------------------------------------
@@ -55,6 +133,35 @@ package storm.isometric.core {
 		 */
 		public function dispose():void {
 			
+		}
+		/**
+		 * Adds a display object on the entity
+		 * @param	id				a unique id for the display object
+		 * @param	d				the display object to add
+		 * @param	offsetX			x offset from the registration point of the entity (top)
+		 * @param	offsetY			y offset from the registration point of the entity (top)
+		 * @param	includeInBounds	if true the display object is calculated to identify bounds and will trigger touch events
+		 * @return a reference to the IsoDisplayObject that is created
+		 */
+		public function addChild(id:String, d:DisplayObject, offsetX:int, offsetY:int, includeInBounds:Boolean = true):IsoDisplayObject {
+			var ido:IsoDisplayObject = new IsoDisplayObject(id, d, offsetX, offsetY, includeInBounds);
+			fChildren.push(ido);
+			var p:Point = ScreenPt;
+			d.x = p.x + offsetX;
+			d.y = p.y + offsetY;
+			if (fLayer!=null) {
+				fLayer.addChild(d);
+			}
+			Invalidate(VALIDATION_RENDER, VALIDATION_VISIBLE);
+			return ido;
+		}
+		/**
+		 * Removes the entity from it's parent layer
+		 */
+		public function Remove(dispose:Boolean = true):void {
+			if (fLayer != null) {
+				fLayer.Remove(this, dispose);
+			}
 		}
 		//}
 		
@@ -87,7 +194,7 @@ package storm.isometric.core {
 		}
 		[Inline]
 		public final function get Bounds():Rectangle {
-			return null;
+			return fBounds;
 		}
 		/**
 		 * The isometric location of the object along the X axis
@@ -98,6 +205,8 @@ package storm.isometric.core {
 		/** @private */
 		public function set IsoX(v:int):void {
 			fIsoLocation.x = v;
+			fScreenPtCache = null;
+			Invalidate(VALIDATION_POSITION);
 		}
 		/**
 		 * The isometric location of the object along the Y axis
@@ -108,6 +217,8 @@ package storm.isometric.core {
 		/** @private */
 		public function set IsoY(v:int):void {
 			fIsoLocation.y = v;
+			fScreenPtCache = null;
+			Invalidate(VALIDATION_POSITION);
 		}
 		/**
 		 * The isometric location of the object along the Z axis
@@ -118,6 +229,8 @@ package storm.isometric.core {
 		/** @private */
 		public function set IsoZ(v:int):void {
 			fIsoLocation.z = v;
+			fScreenPtCache = null;
+			Invalidate(VALIDATION_POSITION);
 		}
 		/**
 		 * The isometric location of the object 
@@ -129,7 +242,37 @@ package storm.isometric.core {
 		public function set IsoLocation(v:IsoPoint):void {
 			fIsoLocation = v;
 		}
-		
+		/** @private */
+		public function get ScreenPt():Point {
+			if (fScreenPtCache == null) {
+				fScreenPtCache = fIsoLocation.ToIso();
+			}
+			return fScreenPtCache;
+		}
+		/**
+		 * The object is outside of the visible area
+		 */
+		public function get Culled():Boolean {
+			return fCulled;
+		}
+		/** @private */
+		public function set Culled(v:Boolean):void {
+			if (fCulled == v) return;
+			fCulled = v;
+			Invalidate(VALIDATION_VISIBLE);
+		}
+		public function get visible():Boolean {
+			return fVisible;
+		}
+		/** @private */
+		public function set visible(v:Boolean):void {
+			if (fVisible == v) return;
+			Invalidate(VALIDATION_VISIBLE);
+			fVisible = v;
+		}
+		public function get Children():Vector.<IsoDisplayObject> {
+			return fChildren;
+		}
 		//}
 		
 		//{ ------------------------ Fields -------------------------------------------------
@@ -143,6 +286,16 @@ package storm.isometric.core {
 		protected var fSize3D:IsoPoint;
 		/** @private */
 		protected var fIsoLocation:IsoPoint;
+		/** @private */
+		protected var fChildren:Vector.<IsoDisplayObject>;
+		/** @private */
+		protected var fScreenPtCache:Point;
+		/** @private */
+		protected var fBounds:Rectangle;
+		/** @private */
+		protected var fCulled:Boolean;
+		/** @private */
+		protected var fVisible:Boolean = true;
 		//}
 
 		//{ ------------------------ Event Handlers -----------------------------------------
@@ -150,7 +303,78 @@ package storm.isometric.core {
 		//}
 
 		//{ ------------------------ Events -------------------------------------------------
+		private function $OnBoundsChanged():void {
+			trace("$Bounds=" + fBounds);
+		}
+		//}
 		
+		//{ ------------------------ Interaction --------------------------------------------
+		/** @private */
+		internal final function $InteractiveEvent(event:int):void {
+			if (event == EIsoInteractiveEvents.ROLLOVER) {
+				fIsRollOver = true;
+			} else  if (event == EIsoInteractiveEvents.ROLLOUT) {
+				fIsRollOver = false;
+			}
+			$OnTouch(event);
+			EmitOnTouch(event);
+		}
+		/** @private */
+		protected function $OnTouch(event:int):void {
+			
+		}
+		/**
+		 * Dispatched when the object is touched
+		 * 
+		 * Expected signature is <code>function(e:IsoEntity, event:int):void</code>
+		 */
+		public function get OnTouch():ISignal {
+			if (fOnTouch == null) {
+				fOnTouch = new Signal(IsoEntity, int);
+			}
+			return fOnTouch;
+		}
+		/** @private */
+		private function EmitOnTouch(event:int):void {
+			if (fOnTouch == null) return;
+			fOnTouch.dispatch(this, event);
+		}
+		/** @private */
+		private var fOnTouch:Signal;		
+		/** @private */
+		internal function hitTest(p:Point):Boolean {
+			H_POINT.setTo(p.x - ScreenPt.x, p.y - ScreenPt.y);
+			if (!Bounds.containsPoint(H_POINT)) return false;
+			for (var i:* in fChildren) {
+				if (fChildren[i].hitTest(H_POINT)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		/**
+		 * Indicates the mouse is over the object
+		 */
+		public function get IsRollOver():Boolean {
+			return fIsRollOver;
+		}		
+		/**
+		 * Indicates if the entity dispatched in touch events
+		 */
+		public function get IsInteractive():Boolean {
+			return fIsInteractive;
+		}
+		/** @private */
+		public function set IsInteractive(v:Boolean):void {
+			if (fIsInteractive == v) return;
+			fIsInteractive = v;
+			if (fLayer) {
+				fLayer.SetEntityInteractive(this, fIsInteractive);
+			}			
+		}
+		protected var fIsRollOver:Boolean;
+		/** @private */
+		protected var fIsInteractive:Boolean;
 		//}
 		
 		//{ ------------------------ Bounds -------------------------------------------------
@@ -252,7 +476,59 @@ package storm.isometric.core {
 			return r;
 		}
 		//}
+
+		//{ ------------------------ Validation ---------------------------------------------
+		/** @private */
+		public function Invalidate(... rest:Array):void {
+			var flag:int;
+			var invalidate:Boolean = false;
+			for (var i:* in rest) {
+				flag = rest[i];
+				if (fValidationFlags.indexOf(flag) == -1) {
+					fValidationFlags.push(flag);
+					invalidate = true;
+				}
+			}
+			if (invalidate) {
+				IsoValidation.Instance.Add(this);
+			}
+		}
 		
+		/** @private */
+		public function Validate():void {
+			var flag:int;
+			// position should ALWAYS be validated FIRST
+			if (fValidationFlags.indexOf(VALIDATION_POSITION) >= 0) {
+				ValidatePosition();
+			}
+			for (var i:* in fValidationFlags) {
+				flag = fValidationFlags[i];
+				switch (flag) {
+					case VALIDATION_RENDER:
+						Render();
+						break;
+					case VALIDATION_VISIBLE:
+						ValidateVisible();
+						break;
+				}
+			}
+			fValidationFlags = new Vector.<int>();
+		}
+		
+
+		public function get IsInvalid():Boolean {
+			return fValidationFlags.length > 0;
+		}
+		/** @private */
+		protected var fValidationFlags:Vector.<int> = new Vector.<int>();
+		/** @private */
+		public static const VALIDATION_RENDER:int = 10;
+		/** @private */
+		public static const VALIDATION_POSITION:int = 11;
+		/** @private */
+		public static const VALIDATION_VISIBLE:int = 12;
+		//}				
+		//}
 		
 		
 		//{ ------------------------ Static -------------------------------------------------
@@ -271,8 +547,9 @@ package storm.isometric.core {
 		//}
 		
 		//{ ------------------------ Helpers ------------------------------------------------
-		internal static const H_POLY:Polygon2d = new Polygon2d();
-		internal static const H_POINT:Point = new Point();
+		protected static const H_POLY:Polygon2d = new Polygon2d();
+		protected static const H_POINT:Point = new Point();
+		protected static const H_RECT:Rectangle = new Rectangle();		
 		//}
 		
 	}

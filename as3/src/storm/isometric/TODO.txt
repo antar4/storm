@@ -8,11 +8,31 @@ IsoEntity
 Polygon2d
 	- Optimize to use series of values instead of points
 
+Sorting
+Culling
+Interaction + Drag + Selection
+	- Controllers (as components?)
+Components + Component Triggers
+State support
+
+Move + Add Operations
+Collision
+Tiles Support
+
 	
+IsoScene
+	- Placement Mode
+		- TILED			
+		- TILED_ELASTIC
+		- FREE
+		new IsoScene(mode:String, tileSize:int = 1);
+		changes collision, pathfinding and movement of objects
+	- Sort Mode
+		- BOX
+		- BOX_ELASTIC
+		- STRICT?
 
 	
 
-CONFUSED x,y,z
-floor implementation is messing up with actual numbers
-implement when needed only and leave raw numbers intact
-Move registration point of IsoEntity at the bottom corner (all 3 coords)
+	
+
